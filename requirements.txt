@@ -1,0 +1,6 @@
+opencv-python
+numpy
+PyMuPDF
+pdf2docx
+spire.doc
+spire.xls
