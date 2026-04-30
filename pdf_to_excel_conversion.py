@@ -13,8 +13,8 @@ from spire.xls.common import *
 # =========================
 # CONFIG
 # =========================
-PDF_PATH = r"C:\Users\Maka_swa\Documents\Sample\RE_ WT-100　添付資料\フロコンスプール(コムテスコ).pdf"
-OUTPUT_DIR = r"C:\Users\Maka_swa\Documents\Sample\output_tables"
+PDF_PATH = "input.pdf"
+OUTPUT_DIR = "output_tables"
 FINAL_EXCEL = os.path.join(OUTPUT_DIR, "final_tables.xlsx")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
