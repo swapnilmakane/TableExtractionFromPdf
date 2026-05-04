@@ -37,38 +37,73 @@ captured_once = {
 
 operation_header_written = False
 
-operation_sheet = final_workbook.CreateEmptySheet("Operation")
+operation_sheet = final_workbook.CreateEmptySheet("operation")
 operation_row = 1
 
 sheets_single = {}
 
 # =========================
-# DETECT TABLE TYPE
+# UPDATED DETECT TABLE TYPE (ONLY CHANGE)
 # =========================
-def detect_table_type(x, y, w, h):
+def detect_table_type(x, y, w, h, page_index=1):
 
-    if y > 2000:
-        return "target_date"
 
-    if y > 800 and h > 300:
+    
+    if page_index == 0:
+        page_index = 1
+
+    # =========================
+    # TOP MOST
+    # =========================
+    if y < 300:
+        return None
+
+    # =========================
+    # HEADER BLOCKS (TOP SECTION)
+    # =========================
+    if 300 <= y < 600:
+
+        if x > 1500:
+            return "customer_id"
+
+        return "part_details"
+
+    # =========================
+    # MID UPPER SECTION
+    # =========================
+    if 600 <= y < 900:
+
+        if x > 2000:
+            return "quantity"
+
         return "operation"
 
-    if y > 1200 and h < 200:
+    # =========================
+    # MID SECTION
+    # =========================
+    if 900 <= y < 1300:
+
         return "lot_details"
 
-    if y > 350 and y < 600 and x > 1500:
-        return "customer_id"
+    # =========================
+    # LOWER SECTION
+    # =========================
+    if 1300 <= y < 1800:
 
-    if x > 2000 and h < 150:
-        return "quantity"
+        return "operation"
 
-    if y > 350 and y < 600 and w < 2000:
-        return "part_details"
+    # =========================
+    # BOTTOM SECTION
+    # =========================
+    if y >= 1800:
+
+        return "target_date"
 
     return None
 
-
-
+# =========================
+# UTILITY FUNCTIONS
+# =========================
 def CopyTextAndStyle(worksheet: Worksheet, cell: CellRange, paragraph: Paragraph):
     cell.RichText.Text = paragraph.Text
 
@@ -173,7 +208,7 @@ def get_work_order_number(doc, page_index, x, y, w, h, scale_x, scale_y):
 
     extra_document = convert_pdf_region_to_docx(doc, page_index, extra_rect)
 
-    sheet_name = "part_details_header"
+    sheet_name = "work_order_details"
     if sheet_name not in sheets_single:
         sheets_single[sheet_name] = final_workbook.CreateEmptySheet(sheet_name)
 
@@ -258,7 +293,7 @@ def process_pdf():
             if w < 80 or h < 30:
                 continue
 
-            table_type = detect_table_type(x, y, w, h)
+            table_type = detect_table_type(x, y, w, h, page_index)
             if table_type is None:
                 continue
 
@@ -272,11 +307,9 @@ def process_pdf():
 
             rect = fitz.Rect(x0, y0, x1, y1)
 
-            
             if table_type == "part_details" and page_index == 0:
                 get_work_order_number(doc, page_index, x, y, w, h, scale_x, scale_y)
 
-            # MAIN TABLE
             document = convert_pdf_region_to_docx(doc, page_index, rect)
             convert_docx_to_excel(document, table_type)
 
