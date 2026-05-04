@@ -43,67 +43,31 @@ operation_row = 1
 sheets_single = {}
 
 # =========================
-# UPDATED DETECT TABLE TYPE (ONLY CHANGE)
+# DETECT TABLE TYPE
 # =========================
-def detect_table_type(x, y, w, h, page_index=1):
 
+def detect_table_type(x, y):
 
-    
-    if page_index == 0:
-        page_index = 1
+    if y > 2000:
+        return "target_date"
 
-    # =========================
-    # TOP MOST
-    # =========================
-    if y < 300:
-        return None
-
-    # =========================
-    # HEADER BLOCKS (TOP SECTION)
-    # =========================
-    if 300 <= y < 600:
-
-        if x > 1500:
-            return "customer_id"
-
-        return "part_details"
-
-    # =========================
-    # MID UPPER SECTION
-    # =========================
-    if 600 <= y < 900:
-
-        if x > 2000:
-            return "quantity"
-
+    if 800 <= y <= 1100:
         return "operation"
 
-    # =========================
-    # MID SECTION
-    # =========================
-    if 900 <= y < 1300:
-
+    if 1100 < y <= 2000:
         return "lot_details"
 
-    # =========================
-    # LOWER SECTION
-    # =========================
-    if 1300 <= y < 1800:
+    if 350 <= y <= 600 and x < 1500:
+        return "part_details"
 
-        return "operation"
+    if 350 <= y <= 600 and x > 1500:
+        return "customer_id"
 
-    # =========================
-    # BOTTOM SECTION
-    # =========================
-    if y >= 1800:
-
-        return "target_date"
+    if 700 <= y <= 1000 and x > 2000:
+        return "quantity"
 
     return None
 
-# =========================
-# UTILITY FUNCTIONS
-# =========================
 def CopyTextAndStyle(worksheet: Worksheet, cell: CellRange, paragraph: Paragraph):
     cell.RichText.Text = paragraph.Text
 
@@ -292,8 +256,8 @@ def process_pdf():
 
             if w < 80 or h < 30:
                 continue
-
-            table_type = detect_table_type(x, y, w, h, page_index)
+            
+            table_type = detect_table_type(x, y)
             if table_type is None:
                 continue
 
