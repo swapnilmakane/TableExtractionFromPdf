@@ -13,7 +13,7 @@ from spire.xls.common import *
 # =========================
 # CONFIG
 # =========================
-PDF_PATH = r"C:\Users\Maka_swa\Documents\Sample\RE_ WT-100　添付資料\ハ゛ランステ゛ィスクA(島津三条).pdf"
+PDF_PATH = "input.pdf"
 OUTPUT_DIR = "output_tables"
 FINAL_EXCEL = os.path.join(OUTPUT_DIR, "final_tables.xlsx")
 
