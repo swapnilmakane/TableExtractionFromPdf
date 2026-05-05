@@ -13,7 +13,7 @@ from spire.xls.common import *
 # =========================
 # CONFIG
 # =========================
-PDF_PATH = "input.pdf"
+PDF_PATH ="input.pdf"
 OUTPUT_DIR = "output_tables"
 FINAL_EXCEL = os.path.join(OUTPUT_DIR, "final_tables.xlsx")
 
@@ -22,7 +22,21 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 DPI = 300
 
+# =========================
+# GLOBAL STATE
+# =========================
+final_workbook = Workbook()
+final_workbook.Worksheets.Clear()
 
+sheets = {}
+row_tracker = {}
+
+
+header_written = {}
+
+# =========================
+# PATTERN CONFIG 
+# =========================
 PATTERN_CONFIG = {
     "pattern_1": {
 
@@ -31,7 +45,6 @@ PATTERN_CONFIG = {
             "x": (115, 125),
             "y": (405, 420),
             "pages": [0],
-            "skip_header": False
         },
 
         "customer_id": {
@@ -39,7 +52,6 @@ PATTERN_CONFIG = {
             "x": (1780, 1790),
             "y": (405, 420),
             "pages": [0],
-            "skip_header": False
         },
 
         "quantity": {
@@ -47,15 +59,13 @@ PATTERN_CONFIG = {
             "x": (2430, 2445),
             "y": (760, 770),
             "pages": [0],
-            "skip_header": False
         },
 
         "operation": {
             "type": "table",
             "x": (115, 125),
             "y": (850, 860),
-            "pages":None,
-            "skip_header": True
+            "pages": None,
         },
 
         "lot_details": {
@@ -63,7 +73,6 @@ PATTERN_CONFIG = {
             "x": (115, 2500),
             "y": (1100, 2000),
             "pages": [-1],
-            "skip_header": False
         },
 
         "target_date": {
@@ -71,7 +80,6 @@ PATTERN_CONFIG = {
             "x": (115, 125),
             "y": (2060, 2070),
             "pages": [0],
-            "skip_header": False
         },
 
         "work_order": {
@@ -84,16 +92,7 @@ PATTERN_CONFIG = {
 }
 
 # =========================
-# GLOBAL STATE
-# =========================
-final_workbook = Workbook()
-final_workbook.Worksheets.Clear()
-
-sheets = {}
-row_tracker = {}
-
-# =========================
-# PAGE VALIDATION (UPDATED)
+# PAGE VALIDATION
 # =========================
 def is_page_valid(cfg, page_index, total_pages):
     pages = cfg.get("pages", None)
@@ -104,14 +103,13 @@ def is_page_valid(cfg, page_index, total_pages):
     if isinstance(pages, list) and len(pages) == 0:
         return False
 
-
     if -1 in pages:
         return page_index == total_pages - 1
 
     return page_index in pages
 
 # =========================
-# TABLE DETECTION
+# TABLE DETECTION 
 # =========================
 def detect_table_type(x, y, page_index, total_pages):
     config = PATTERN_CONFIG[PATTERN]
@@ -129,7 +127,7 @@ def detect_table_type(x, y, page_index, total_pages):
     return None
 
 # =========================
-# Spire helpers 
+# SPIRE HELPERS 
 # =========================
 def CopyTextAndStyle(ws, cell, paragraph):
     cell.RichText.Text = paragraph.Text
@@ -152,10 +150,17 @@ def CopyContentInTable(tableCell, cell, worksheet):
     CopyTextAndStyle(worksheet, cell, newParagraph)
 
 # =========================
-# EXPORT TABLE
+# EXPORT TABLE 
 # =========================
-def ExportTableInExcel(ws, row, table, skip_header=False):
-    start_row = 1 if skip_header else 0
+def ExportTableInExcel(ws, row, table, table_type):
+
+    global header_written
+
+    if table_type not in header_written:
+        header_written[table_type] = False
+
+    # ✔ FIRST TIME ONLY SKIP HEADER
+    start_row = 1 if header_written[table_type] else 0
 
     for i in range(start_row, table.Rows.Count):
         col = 1
@@ -164,16 +169,12 @@ def ExportTableInExcel(ws, row, table, skip_header=False):
             cell = ws.Range[row, col]
             cell.BorderAround(LineStyleType.Thin, Color.get_Black())
 
-            CopyContentInTable(
-                table.Rows[i].Cells[j],
-                cell,
-                ws
-            )
-
+            CopyContentInTable(table.Rows[i].Cells[j], cell, ws)
             col += 1
 
         row += 1
 
+    header_written[table_type] = True
     return row
 
 # =========================
@@ -231,7 +232,6 @@ def pdf_to_docx(doc, page_index, rect):
 # DOCX → EXCEL
 # =========================
 def convert(doc, table_type):
-    cfg = PATTERN_CONFIG[PATTERN][table_type]
 
     if table_type not in sheets:
         sheets[table_type] = final_workbook.CreateEmptySheet(table_type)
@@ -240,8 +240,6 @@ def convert(doc, table_type):
     ws = sheets[table_type]
     row = row_tracker[table_type]
 
-    skip_header = cfg.get("skip_header", False)
-
     for i in range(doc.Sections.Count):
         section = doc.Sections[i]
 
@@ -249,13 +247,13 @@ def convert(doc, table_type):
             obj = section.Body.ChildObjects[j]
 
             if isinstance(obj, Table):
-                row = ExportTableInExcel(ws, row, Table(obj), skip_header)
+                row = ExportTableInExcel(ws, row, Table(obj), table_type)
 
     row_tracker[table_type] = row
     doc.Dispose()
 
 # =========================
-# REGION EXTRACTION
+# REGION EXTRACTION (UNCHANGED)
 # =========================
 def extract_region(doc, page_index, name, cfg, sx, sy):
     x0, x1 = cfg["x"]
