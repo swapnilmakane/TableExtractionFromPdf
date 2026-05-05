@@ -47,24 +47,36 @@ sheets_single = {}
 # =========================
 
 def detect_table_type(x, y):
+    """
+    Coordinate system:
+    - (0, 0) is the top-left corner of the page image
+    - x increases → left to right
+    - y increases ↓ top to bottom
 
-    if y > 2000:
-        return "target_date"
+    Each table is identified by its top-left anchor position.
+    """
+    # y ≈ 410 → two tables exist on this row
+    if 405 <= y <= 420:
+        if 115 <= x <= 125:
+            return "part_details"      # left table at (≈120, 410)
+        if 1780 <= x <= 1790:
+            return "customer_id"       # right table at (≈1785, 410)
 
-    if 800 <= y <= 1100:
+    # table at (≈2435, 765)
+    if 760 <= y <= 770 and 2430 <= x <= 2445:
+        return "quantity"
+
+    # table at (≈120, 855)
+    if 850 <= y <= 860 and 115 <= x <= 125:
         return "operation"
 
-    if 1100 < y <= 2000:
+    # table at (≈120, 1240)
+    if 1235 <= y <= 1250 and 115 <= x <= 125:
         return "lot_details"
 
-    if 350 <= y <= 600 and x < 1500:
-        return "part_details"
-
-    if 350 <= y <= 600 and x > 1500:
-        return "customer_id"
-
-    if 700 <= y <= 1000 and x > 2000:
-        return "quantity"
+    # table at (≈120, 2065)
+    if 2060 <= y <= 2070 and 115 <= x <= 125:
+        return "target_date"
 
     return None
 
