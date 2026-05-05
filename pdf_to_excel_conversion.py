@@ -13,13 +13,65 @@ from spire.xls.common import *
 # =========================
 # CONFIG
 # =========================
-PDF_PATH = "input.pdf"
+PDF_PATH = r"C:\Users\Maka_swa\Documents\Sample\RE_ WT-100　添付資料\ハ゛ランステ゛ィスクA(島津三条).pdf"
 OUTPUT_DIR = "output_tables"
 FINAL_EXCEL = os.path.join(OUTPUT_DIR, "final_tables.xlsx")
+
+PATTERN = "pattern 1"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 DPI = 300
+
+# =========================
+# PATTERN CONFIG 
+# =========================
+PATTERN_CONFIG = {
+    "pattern 1": {
+        "part_details": {
+            "type": "table",
+            "x": (115,125),
+            "y": (405,420),
+            "pages": [0]
+        },
+        "customer_id": {
+            "type": "table",
+            "x": (1780,1790),
+            "y": (405,420),
+            "pages": [0]
+        },
+        "quantity": {
+            "type": "table",
+            "x": (2430,2445),
+            "y": (760,770),
+            "pages": [0]
+        },
+        "operation": {
+            "type": "table",
+            "x": (115,125),
+            "y": (850,860),
+            "pages": [0,1]   # multi-page example
+        },
+        "lot_details": {
+            "type": "table",
+            "x": (115,125),
+            "y": (1235,1250),
+            "pages": [0]
+        },
+        "target_date": {
+            "type": "table",
+            "x": (115,125),
+            "y": (2060,2070),
+            "pages": [0]
+        },
+        "work_order": {
+            "type": "region",
+            "x": (100,2500),
+            "y": (100,350),
+            "pages": [0]
+        }
+    }
+}
 
 # =========================
 # GLOBAL STATE
@@ -27,14 +79,7 @@ DPI = 300
 final_workbook = Workbook()
 final_workbook.Worksheets.Clear()
 
-captured_once = {
-    "target_date": False,
-    "quantity": False,
-    "part_details": False,
-    "customer_id": False,
-    "lot_details": False
-}
-
+captured_once = {}
 operation_header_written = False
 
 operation_sheet = final_workbook.CreateEmptySheet("operation")
@@ -43,73 +88,70 @@ operation_row = 1
 sheets_single = {}
 
 # =========================
-# DETECT TABLE TYPE
+# PAGE FILTER
 # =========================
+def is_page_valid(cfg, page_index):
+    pages = cfg.get("pages")
+    if pages is None:
+        return True
+    return page_index in pages
 
-def detect_table_type(x, y):
-    """
-    Coordinate system:
-    - (0, 0) is the top-left corner of the page image
-    - x increases → left to right
-    - y increases ↓ top to bottom
+# =========================
+# TABLE DETECTION
+# =========================
+def detect_table_type(x, y, page_index):
+    config = PATTERN_CONFIG[PATTERN]
 
-    Each table is identified by its top-left anchor position.
-    """
-    # y ≈ 410 → two tables exist on this row
-    if 405 <= y <= 420:
-        if 115 <= x <= 125:
-            return "part_details"      # left table at (≈120, 410)
-        if 1780 <= x <= 1790:
-            return "customer_id"       # right table at (≈1785, 410)
+    for name, cfg in config.items():
+        if cfg["type"] != "table":
+            continue
 
-    # table at (≈2435, 765)
-    if 760 <= y <= 770 and 2430 <= x <= 2445:
-        return "quantity"
+        if not is_page_valid(cfg, page_index):
+            continue
 
-    # table at (≈120, 855)
-    if 850 <= y <= 860 and 115 <= x <= 125:
-        return "operation"
-
-    # table at (≈120, 1240)
-    if 1235 <= y <= 1250 and 115 <= x <= 125:
-        return "lot_details"
-
-    # table at (≈120, 2065)
-    if 2060 <= y <= 2070 and 115 <= x <= 125:
-        return "target_date"
+        if cfg["x"][0] <= x <= cfg["x"][1] and \
+           cfg["y"][0] <= y <= cfg["y"][1]:
+            return name
 
     return None
 
-def CopyTextAndStyle(worksheet: Worksheet, cell: CellRange, paragraph: Paragraph):
+
+def CopyText(cell, paragraph):
     cell.RichText.Text = paragraph.Text
 
-
-def CopyContentInTable(tableCell: TableCell, cell: CellRange, worksheet: Worksheet):
+def CopyContentInTable(tableCell, cell, ws):
     newParagraph = Paragraph(tableCell.Document)
+
     for i in range(tableCell.ChildObjects.Count):
         obj = tableCell.ChildObjects[i]
+
         if isinstance(obj, Paragraph):
             para = Paragraph(obj)
+
             for j in range(para.ChildObjects.Count):
                 newParagraph.ChildObjects.Add(para.ChildObjects[j].Clone())
+
             if i < tableCell.ChildObjects.Count - 1:
                 newParagraph.AppendText("\n")
-    CopyTextAndStyle(worksheet, cell, newParagraph)
 
+    CopyText(cell, newParagraph)
 
-def ExportTableInExcel(worksheet: Worksheet, row: int, table: Table, skip_header=False):
+def ExportTableInExcel(ws, row, table, skip_header=False):
     start_row = 1 if skip_header else 0
 
     for i in range(start_row, table.Rows.Count):
         col = 1
-        for j in range(table.Rows[i].Cells.Count):
-            cell = worksheet.Range[row, col]
-            cell.BorderAround(LineStyleType.Thin, Color.get_Black())
-            CopyContentInTable(table.Rows[i].Cells[j], cell, worksheet)
-            col += 1
-        row += 1
-    return row
 
+        for j in range(table.Rows[i].Cells.Count):
+            cell = ws.Range[row, col]
+            cell.BorderAround(LineStyleType.Thin, Color.get_Black())
+
+            CopyContentInTable(table.Rows[i].Cells[j], cell, ws)
+            col += 1
+
+        row += 1
+
+    return row
 
 # =========================
 # IMAGE PROCESSING
@@ -118,27 +160,25 @@ def get_table_contours(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
 
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (30, 1))
-    vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 30))
+    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (30, 1))
+    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 30))
 
-    horizontal_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=2)
-    vertical_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, vertical_kernel, iterations=2)
+    h_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, h_kernel, iterations=2)
+    v_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, v_kernel, iterations=2)
 
-    table_mask = cv2.add(horizontal_lines, vertical_lines)
-    table_mask = cv2.dilate(table_mask, np.ones((3, 3), np.uint8), iterations=1)
+    mask = cv2.add(h_lines, v_lines)
+    mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
 
-    contours, _ = cv2.findContours(table_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
-
-    return contours
-
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
 
 # =========================
-# PDF CROP + CONVERT
+# PDF → DOCX
 # =========================
 def convert_pdf_region_to_docx(doc, page_index, rect):
     new_doc = fitz.open()
     new_page = new_doc.new_page(width=rect.width, height=rect.height)
+
     new_page.show_pdf_page(new_page.rect, doc, page_index, clip=rect)
 
     pdf_bytes = new_doc.tobytes()
@@ -160,79 +200,45 @@ def convert_pdf_region_to_docx(doc, page_index, rect):
         document.LoadFromFile(tmp_docx.name)
 
     finally:
-        if os.path.exists(tmp_pdf.name):
-            os.remove(tmp_pdf.name)
-        if os.path.exists(tmp_docx.name):
-            os.remove(tmp_docx.name)
+        os.remove(tmp_pdf.name)
+        os.remove(tmp_docx.name)
 
     return document
 
-
 # =========================
-# Work Order Number
-# =========================
-def get_work_order_number(doc, page_index, x, y, w, h, scale_x, scale_y):
-    extra_top = max(0, y - 140)
-    extra_bottom = y
-
-    extra_rect = fitz.Rect(
-        x * scale_x,
-        extra_top * scale_y,
-        (x + w) * scale_x,
-        extra_bottom * scale_y
-    )
-
-    extra_document = convert_pdf_region_to_docx(doc, page_index, extra_rect)
-
-    sheet_name = "work_order_details"
-    if sheet_name not in sheets_single:
-        sheets_single[sheet_name] = final_workbook.CreateEmptySheet(sheet_name)
-
-    ws = sheets_single[sheet_name]
-    row_header = 1
-
-    for i in range(extra_document.Sections.Count):
-        section = extra_document.Sections[i]
-        for j in range(section.Body.ChildObjects.Count):
-            obj = section.Body.ChildObjects[j]
-            if isinstance(obj, Table):
-                row_header = ExportTableInExcel(ws, row_header, Table(obj))
-
-    extra_document.Dispose()
-
-
-# =========================
-# Convert docx to excel
+# DOCX → EXCEL
 # =========================
 def convert_docx_to_excel(document, table_type):
     global operation_row, operation_header_written
 
     if table_type == "operation":
-        worksheet = operation_sheet
+        ws = operation_sheet
         row = operation_row
     else:
         if table_type not in sheets_single:
             sheets_single[table_type] = final_workbook.CreateEmptySheet(table_type)
-        worksheet = sheets_single[table_type]
+
+        ws = sheets_single[table_type]
         row = 1
+
 
     for i in range(document.Sections.Count):
         section = document.Sections[i]
+
         for j in range(section.Body.ChildObjects.Count):
             obj = section.Body.ChildObjects[j]
 
             if isinstance(obj, Table):
-
                 if table_type == "operation":
                     row = ExportTableInExcel(
-                        worksheet,
+                        ws,
                         row,
                         Table(obj),
                         skip_header=operation_header_written
                     )
                     operation_header_written = True
                 else:
-                    row = ExportTableInExcel(worksheet, row, Table(obj))
+                    row = ExportTableInExcel(ws, row, Table(obj))
 
     document.Dispose()
 
@@ -241,6 +247,24 @@ def convert_docx_to_excel(document, table_type):
     else:
         captured_once[table_type] = True
 
+# =========================
+# REGION EXTRACTION
+# =========================
+def extract_region(doc, page_index, name, cfg, scale_x, scale_y):
+    x_min, x_max = cfg["x"]
+    y_min, y_max = cfg["y"]
+
+    rect = fitz.Rect(
+        x_min * scale_x,
+        y_min * scale_y,
+        x_max * scale_x,
+        y_max * scale_y
+    )
+
+    document = convert_pdf_region_to_docx(doc, page_index, rect)
+    convert_docx_to_excel(document, name)
+
+    print(f"✅ REGION → {name}")
 
 # =========================
 # MAIN PROCESS
@@ -256,41 +280,44 @@ def process_pdf():
 
         contours = get_table_contours(image)
 
-        pdf_width = page.rect.width
-        pdf_height = page.rect.height
-
+        pdf_w, pdf_h = page.rect.width, page.rect.height
         img_h, img_w = image.shape[:2]
-        scale_x = pdf_width / img_w
-        scale_y = pdf_height / img_h
 
+        scale_x = pdf_w / img_w
+        scale_y = pdf_h / img_h
+
+        config = PATTERN_CONFIG[PATTERN]
+
+        # 🔹 REGION FIRST
+        for name, cfg in config.items():
+            if cfg["type"] == "region" and is_page_valid(cfg, page_index):
+                extract_region(doc, page_index, name, cfg, scale_x, scale_y)
+
+        # 🔹 TABLES
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
 
             if w < 80 or h < 30:
                 continue
-            
-            table_type = detect_table_type(x, y)
+
+            table_type = detect_table_type(x, y, page_index)
             if table_type is None:
                 continue
 
             if table_type != "operation" and captured_once.get(table_type, False):
                 continue
 
-            x0 = x * scale_x
-            x1 = (x + w) * scale_x
-            y0 = y * scale_y
-            y1 = (y + h) * scale_y
-
-            rect = fitz.Rect(x0, y0, x1, y1)
-
-            if table_type == "part_details" and page_index == 0:
-                get_work_order_number(doc, page_index, x, y, w, h, scale_x, scale_y)
+            rect = fitz.Rect(
+                x * scale_x,
+                y * scale_y,
+                (x + w) * scale_x,
+                (y + h) * scale_y
+            )
 
             document = convert_pdf_region_to_docx(doc, page_index, rect)
             convert_docx_to_excel(document, table_type)
 
-            print(f"✅ {table_type} processed")
-
+            print(f"✅ TABLE → {table_type}")
 
 # =========================
 # RUN
