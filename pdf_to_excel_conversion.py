@@ -249,11 +249,28 @@ def extract_json_from_excel(excel_path):
         return wb[sheet][cell].value
 
     def to_str(val):
-        return str(val).strip() if val is not None else None
+        if val is None:
+            return None
+
+        text = str(val)
+
+        # Replace Excel encoded vertical tab
+        text = text.replace("_x000B_", "\n")
+
+        # Also handle actual VT char if present
+        text = text.replace("\x0b", "\n")
+
+        return text.strip()
 
     def to_int(val):
+        if val is None:
+            return None
+
         try:
-            return int(val)
+            cleaned = str(val).replace(",", "").strip()
+
+            return int(cleaned)
+
         except:
             return None
 
@@ -280,7 +297,7 @@ def extract_json_from_excel(excel_path):
                 return val  # fallback (raw)
 
     result = {
-        "WorkOrderNumber": " ".join(filter(None, [
+        "WorkOrderNumber": "".join(filter(None, [
             to_str(get("work_order", "B1")),
             to_str(get("work_order", "C1")),
             to_str(get("work_order", "D1")),
