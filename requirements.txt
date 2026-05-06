@@ -4,3 +4,6 @@ PyMuPDF
 pdf2docx
 spire.doc
 spire.xls
+fastapi
+openpyxl
+uvicorn
