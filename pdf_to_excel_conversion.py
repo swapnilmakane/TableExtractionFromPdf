@@ -240,7 +240,7 @@ def process_pdf(pdf_path, output_excel_path):
 # =========================
 # EXCEL → JSON
 # =========================
-def extract_json_from_excel(excel_path):
+def extract_json_pattern_1(excel_path):
     wb = load_workbook(excel_path, data_only=True)
 
     def get(sheet, cell):
@@ -336,6 +336,11 @@ def extract_json_from_excel(excel_path):
 
     return result
 
+def extract_json_from_excel(path, pattern):
+    if pattern == "pattern_1":
+        return extract_json_pattern_1(path)
+    raise ValueError("Unsupported pattern")
+
 # =========================
 # API
 # =========================
@@ -355,7 +360,7 @@ async def convert_api(file: UploadFile = File(...)):
 
         process_pdf(temp_pdf_path, temp_excel_path)
 
-        structured_data = extract_json_from_excel(temp_excel_path)
+        structured_data = extract_json_from_excel(temp_excel_path,PATTERN)
 
         return structured_data  # ✅ CLEAN RESPONSE
 
