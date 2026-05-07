@@ -15,7 +15,6 @@ from spire.xls import *
 from spire.xls.common import *
 
 from pdf_table_extractor.core.config import (
-    DEFAULT_PATTERN,
     DPI,
     get_pattern_config,
     get_pattern_extractor,
@@ -156,8 +155,8 @@ def write_docx_tables_to_excel(document, table_type, sheets, row_tracker, workbo
     document.Dispose()
 
 
-def convert_pdf_to_excel(pdf_path, output_excel_path, pattern_name=DEFAULT_PATTERN):
-    pattern_config = get_pattern_config(pattern_name)
+def convert_pdf_to_excel(pdf_path, output_excel_path, customerName: str):
+    pattern_config = get_pattern_config(customerName)
     document = fitz.open(pdf_path)
     workbook = Workbook()
     workbook.Worksheets.Clear()
@@ -199,7 +198,7 @@ def convert_pdf_to_excel(pdf_path, output_excel_path, pattern_name=DEFAULT_PATTE
                 if width < 80 or height < 30:
                     continue
 
-                table_type = detect_table_type(x, y, page_index, total_pages, pattern_name)
+                table_type = detect_table_type(x, y, page_index, total_pages, customerName)
                 if not table_type:
                     continue
 
@@ -219,8 +218,7 @@ def convert_pdf_to_excel(pdf_path, output_excel_path, pattern_name=DEFAULT_PATTE
         document.close()
 
 
-async def process_uploaded_pdf(file: UploadFile, pattern_name=DEFAULT_PATTERN):
-    selected_pattern = pattern_name or DEFAULT_PATTERN
+async def process_uploaded_pdf(file: UploadFile, customerName: str):
     pdf_bytes = await file.read()
 
     temp_pdf_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}.pdf")
@@ -230,8 +228,8 @@ async def process_uploaded_pdf(file: UploadFile, pattern_name=DEFAULT_PATTERN):
         with open(temp_pdf_path, "wb") as pdf_file:
             pdf_file.write(pdf_bytes)
 
-        convert_pdf_to_excel(temp_pdf_path, temp_excel_path, selected_pattern)
-        return extract_json_from_excel(temp_excel_path, selected_pattern)
+        convert_pdf_to_excel(temp_pdf_path, temp_excel_path, customerName)
+        return extract_json_from_excel(temp_excel_path, customerName)
     finally:
         time.sleep(0.5)
         with suppress(FileNotFoundError, PermissionError):

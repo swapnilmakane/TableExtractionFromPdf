@@ -2,7 +2,7 @@ from pdf_table_extractor.extractors.pattern_1 import extract_pattern_1
 
 
 DPI = 300
-DEFAULT_PATTERN = "pattern_1"
+
 
 PATTERN_CONFIG = {
     "pattern_1": {
