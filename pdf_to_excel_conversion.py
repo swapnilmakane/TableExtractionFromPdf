@@ -38,6 +38,8 @@ PATTERN_CONFIG = {
     }
 }
 
+
+
 # =========================
 # HELPERS
 # =========================
@@ -329,16 +331,20 @@ def extract_json_pattern_1(excel_path):
                 "OperationNumber": to_str(op_num),
                 "OperationName": to_str(op_name),
                 "WorkCenterGroup": to_str(ws[f"D{row}"].value),
-                "IsInHouse": bool(ws[f"C{row}"].value) if ws[f"C{row}"].value is not None else False
+                "IsInHouse": to_str(ws[f"C{row}"].value)
             })
 
             row += 1
 
     return result
 
+EXPORT_CONFIG = {
+    "pattern_1": extract_json_pattern_1
+}
+
 def extract_json_from_excel(path, pattern):
-    if pattern == "pattern_1":
-        return extract_json_pattern_1(path)
+    if pattern in EXPORT_CONFIG:
+        return EXPORT_CONFIG[pattern](path)
     raise ValueError("Unsupported pattern")
 
 # =========================
