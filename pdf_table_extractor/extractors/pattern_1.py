@@ -66,19 +66,20 @@ def extract_pattern_1(excel_path):
     if "operation" in workbook:
         worksheet = workbook["operation"]
         row = 2
-
-        while True:
+        worksheet_max_row = worksheet.max_row
+        while row <= worksheet_max_row:
             operation_number = worksheet[f"A{row}"].value
             operation_name = worksheet[f"B{row}"].value
+            in_house = worksheet[f"C{row}"].value
+            print(in_house)
 
-            if not operation_number and not operation_name:
-                break
+            
 
             result["Operations"].append({
                 "OperationNumber": to_str(operation_number),
                 "OperationName": to_str(operation_name),
-                "WorkCenterGroup": to_str(worksheet[f"D{row}"].value),
-                "IsInHouse": to_str(worksheet[f"C{row}"].value),
+                "WorkCenterGroup": to_str(worksheet[f"D{row}"].value).split('\n')[0],
+                "IsInHouse": True if in_house == "社内" else False
             })
 
             row += 1

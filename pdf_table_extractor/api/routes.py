@@ -1,6 +1,6 @@
-from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 
 from pdf_table_extractor.services.pdf_conversion_service import process_uploaded_pdf
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.post("/convert")
 async def convert_pdf(
     customer_name: str,
-    file: UploadFile = File(...),
+    file: UploadFile
 ):
 
 
