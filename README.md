@@ -1,6 +1,6 @@
-# PDF to Excel Table Extraction
+# PDF Table Extraction API
 
-A FastAPI-based application that extracts tables from PDF files and converts them into Excel spreadsheets. It uses advanced image processing techniques to detect table regions, converts them to DOCX format, and exports organized data to Excel sheets.
+A FastAPI-based application that extracts tables from PDF files, converts the detected regions into an intermediate Excel workbook, and returns structured JSON.
 
 ## Features
 
@@ -14,7 +14,7 @@ A FastAPI-based application that extracts tables from PDF files and converts the
 - **Multi-page Processing**: Handles PDFs with multiple pages
 - **Pattern-based Configuration**: Supports configurable table patterns for different PDF layouts
 - **REST API**: Built with FastAPI for easy integration and file uploads
-- **Organized Output**: Exports data to properly formatted Excel sheets (`final_tables.xlsx`)
+- **Structured JSON Output**: Converts extracted workbook data into a JSON response.
 
 ## Installation
 
@@ -41,14 +41,20 @@ A FastAPI-based application that extracts tables from PDF files and converts the
 ### Running the FastAPI Server
 
 ```bash
-python pdf_to_excel_conversion.py
+python main.py
 ```
 
-The server will start and be accessible via FastAPI endpoints for PDF upload and table extraction.
+You can also run the app directly with Uvicorn:
+
+```bash
+uvicorn pdf_table_extractor.app:app --reload
+```
+
+The `/convert` endpoint accepts a PDF upload and returns extracted JSON. Use the `pattern_name` query parameter to select a configured pattern. The older `customerName` query parameter is still accepted for compatibility.
 
 ### Configuring for Your PDF Structure
 
-The application uses a pattern-based configuration system. Update the `PATTERN_CONFIG` dictionary in the script to match your PDF structure:
+The application uses a pattern-based configuration system. Update `PATTERN_CONFIG` in `pdf_table_extractor/core/config.py` to match your PDF structure:
 
 ```python
 PATTERN_CONFIG = {
@@ -67,18 +73,34 @@ PATTERN_CONFIG = {
 
 ## Configuration
 
-- `PDF_PATH`: Path to your input PDF file
-- `OUTPUT_DIR`: Directory where extracted Excel files will be saved
 - `DPI`: Resolution for image processing (default: 300)
-- `PATTERN`: Active pattern configuration to use
+- `DEFAULT_PATTERN`: Pattern used when no query parameter is provided
+- `PATTERN_CONFIG`: Table and region coordinates by pattern
+- `EXTRACTOR_CONFIG`: Maps each pattern to its Excel-to-JSON extractor
 
 ## Output
 
-The script generates `final_tables.xlsx` with extracted table data organized into separate sheets based on table type.
+The API returns JSON. Temporary PDF and Excel files are created during processing and removed after the request completes.
+
+## Project Structure
+
+```text
+pdf_table_extractor/
+  app.py                 FastAPI application setup
+  api/
+    routes.py            HTTP endpoints
+  core/
+    config.py            DPI, pattern coordinates, extractor registry
+  services/
+    pdf_conversion_service.py
+                         PDF region detection and Excel conversion flow
+  extractors/
+    pattern_1.py         Pattern-specific Excel-to-JSON parser
+main.py                  Local server entry point
+```
 
 ## Notes
 
-- The script is configured for a specific PDF structure by default. Adjust the `PATTERN_CONFIG` coordinates for different PDF layouts.
-- Ensure input PDF paths and output directories are accessible before running.
+- The app is configured for a specific PDF structure by default. Adjust the `PATTERN_CONFIG` coordinates for different PDF layouts.
 - The image processing coordinates (x, y) may need fine-tuning based on your specific PDF dimensions.
-- Requires appropriate permissions to read input PDFs and write to the output directory.
+- Requires appropriate permissions to create temporary files while processing each request.
