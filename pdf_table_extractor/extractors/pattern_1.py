@@ -71,8 +71,6 @@ def extract_pattern_1(excel_path):
             operation_number = worksheet[f"A{row}"].value
             operation_name = worksheet[f"B{row}"].value
             in_house = worksheet[f"C{row}"].value
-            print(in_house)
-
             
 
             result["Operations"].append({
