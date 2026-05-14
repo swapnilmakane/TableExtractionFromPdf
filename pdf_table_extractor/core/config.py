@@ -1,18 +1,11 @@
-from pdf_table_extractor.extractors.pattern_1 import extract_pattern_1
+from pdf_table_extractor.extractors.pattern_1 import extract_pattern_1, get_pattern_config_pattern_1
 
 
 DPI = 300
 
 
 PATTERN_CONFIG = {
-    "pattern_1": {
-        "part_details": {"type": "table", "x": (115, 125), "y": (405, 420), "pages": [0]},
-        "customer_id": {"type": "table", "x": (1780, 1790), "y": (405, 420), "pages": [0]},
-        "quantity": {"type": "table", "x": (2430, 2445), "y": (760, 770), "pages": [0]},
-        "operation": {"type": "table", "x": (115, 125), "y": (850, 860), "pages": None},
-        "target_date": {"type": "table", "x": (115, 125), "y": (2060, 2070), "pages": [0]},
-        "work_order": {"type": "region", "x": (120, 1750), "y": (270, 400), "pages": [0]},
-    }
+    "pattern_1": get_pattern_config_pattern_1()
 }
 
 EXTRACTOR_CONFIG = {
