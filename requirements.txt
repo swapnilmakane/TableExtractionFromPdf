@@ -1,9 +1,10 @@
-opencv-python
+opencv-python-headless
 numpy
 PyMuPDF
 pdf2docx
 spire.doc
 spire.xls
 fastapi
+python-multipart
 openpyxl
 uvicorn
